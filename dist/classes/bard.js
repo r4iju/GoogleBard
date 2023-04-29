@@ -149,19 +149,18 @@ class Bard {
         }
     }
     async ask(prompt, conversationId) {
-        let resData = await this.send(prompt, conversationId);
-        return resData[0];
+        return await this.send(prompt, conversationId);
     }
     async askStream(data, prompt, conversationId) {
         let resData = await this.send(prompt, conversationId);
-        let responseChunks = resData[0].split(" ");
+        let responseChunks = resData.content.split(" ");
         for await (let chunk of responseChunks) {
             if (chunk === "")
                 continue;
             data(`${chunk} `);
             await Wait(Random(25, 250));
         }
-        return resData[0];
+        return resData;
     }
     async send(prompt, conversationId) {
         await this.waitForLoad();
@@ -185,7 +184,13 @@ class Bard {
             conversation.c = parsedResponse.c;
             conversation.r = parsedResponse.r;
             conversation.rc = parsedResponse.rc;
-            return parsedResponse.responses;
+            return {
+                content: parsedResponse.responses[0],
+                options: parsedResponse.responses,
+                conversationId: conversation.c,
+                requestId: conversation.c,
+                responseId: conversation.rc,
+            };
         }
         catch (e) {
             console.log(e.message);

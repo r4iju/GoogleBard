@@ -1,6 +1,7 @@
 /// <reference types="node" />
 import https from "https";
 import { SocksProxyAgent } from 'socks-proxy-agent';
+import BardResponse from "src/models/response.js";
 declare class Bard {
     private axios;
     private db;
@@ -13,8 +14,8 @@ declare class Bard {
     resetConversation(id?: string): void;
     private ParseResponse;
     private GetRequestParams;
-    ask(prompt: string, conversationId?: string): Promise<any>;
-    askStream(data: (arg0: string) => void, prompt: string, conversationId?: string): Promise<any>;
+    ask(prompt: string, conversationId?: string): Promise<BardResponse>;
+    askStream(data: (arg0: string) => void, prompt: string, conversationId?: string): Promise<BardResponse>;
     private send;
 }
 export default Bard;

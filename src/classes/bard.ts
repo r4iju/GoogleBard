@@ -8,6 +8,7 @@ import AppDbContext from "./app-dbcontext.js";
 import Conversation from "../models/conversation.js";
 import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
 import { SocksProxyAgent } from 'socks-proxy-agent'
+import BardResponse from "src/models/response.js";
 
 
 class Bard {
@@ -159,24 +160,22 @@ class Bard {
 		}
 	}
 
-	public async ask(prompt: string, conversationId?: string) {
-		// return await this.askStream((data) => {}, prompt, conversationId);
-		let resData = await this.send(prompt, conversationId);
-		return resData[0];
+	public async ask(prompt: string, conversationId?: string): Promise<BardResponse> {
+		return await this.send(prompt, conversationId);
 	}
 
-	public async askStream(data: (arg0: string) => void, prompt: string, conversationId?: string) {
+	public async askStream(data: (arg0: string) => void, prompt: string, conversationId?: string): Promise<BardResponse> {
 		let resData = await this.send(prompt, conversationId);
-		let responseChunks = resData[0].split(" ");
+		let responseChunks = resData.content.split(" ");
 		for await (let chunk of responseChunks) {
 			if (chunk === "") continue;
 			data(`${chunk} `);
 			await Wait(Random(25, 250)); // simulate typing
 		}
-		return resData[0];
+		return resData;
 	}
 
-	private async send(prompt: string, conversationId?: string) {
+	private async send(prompt: string, conversationId?: string): Promise<BardResponse> {
 		await this.waitForLoad();
 		let conversation = this.getConversationById(conversationId);
 		try {
@@ -204,11 +203,17 @@ class Bard {
 			// if (cookies) this.cookies = cookies.join("; ");
 
 			let parsedResponse = this.ParseResponse(response.data);
-			conversation.c = parsedResponse.c;
-			conversation.r = parsedResponse.r;
-			conversation.rc = parsedResponse.rc;
+			conversation.c = parsedResponse.c; // conversationId
+			conversation.r = parsedResponse.r; // requestId
+			conversation.rc = parsedResponse.rc; // responseId
 
-			return parsedResponse.responses;
+			return {
+				content: parsedResponse.responses[0], 
+				options: parsedResponse.responses,
+				conversationId: conversation.c,
+				requestId: conversation.c, 
+				responseId: conversation.rc,
+			};
 		} catch (e: any) {
 			console.log(e.message);
 		}

@@ -34,7 +34,7 @@ async function main() {
 
     process.stdout.write("Google Bard: ");
     const res = await bot.ask(prompt)
-    console.log(res)
+    console.log(res.content)
   }
 }
 
