@@ -10,6 +10,10 @@ import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
 import { SocksProxyAgent } from 'socks-proxy-agent'
 import BardResponse from "src/models/response.js";
 
+interface BardOptions {
+	cookies: string;
+	agent?: SocksProxyAgent | https.Agent;
+}
 
 class Bard {
 	private axios: AxiosInstance;
@@ -17,10 +21,10 @@ class Bard {
 	private cookies: string = "";
 	private agent: SocksProxyAgent | https.Agent = new https.Agent({ rejectUnauthorized: false });
 
-	constructor(cookie: string, agent?: SocksProxyAgent | https.Agent ) {
+	constructor(options: BardOptions ) {
 		this.db = new AppDbContext();
-		this.cookies = cookie;
-		if (agent) this.agent = agent;
+		this.cookies = options.cookies;
+		if (options.agent) this.agent = options.agent;
 
 		let axiosOptions: AxiosRequestConfig = {
 			httpsAgent: this.agent,
