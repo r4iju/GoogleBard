@@ -2,12 +2,16 @@
 import https from "https";
 import { SocksProxyAgent } from 'socks-proxy-agent';
 import BardResponse from "src/models/response.js";
+interface BardOptions {
+    cookies: string;
+    agent?: SocksProxyAgent | https.Agent;
+}
 declare class Bard {
     private axios;
     private db;
     private cookies;
     private agent;
-    constructor(cookie: string, agent?: SocksProxyAgent | https.Agent);
+    constructor(options: BardOptions);
     private waitForLoad;
     private addConversation;
     private getConversationById;

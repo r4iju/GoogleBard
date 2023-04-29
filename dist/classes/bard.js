@@ -10,11 +10,11 @@ class Bard {
     db;
     cookies = "";
     agent = new https.Agent({ rejectUnauthorized: false });
-    constructor(cookie, agent) {
+    constructor(options) {
         this.db = new AppDbContext();
-        this.cookies = cookie;
-        if (agent)
-            this.agent = agent;
+        this.cookies = options.cookies;
+        if (options.agent)
+            this.agent = options.agent;
         let axiosOptions = {
             httpsAgent: this.agent,
             headers: {
