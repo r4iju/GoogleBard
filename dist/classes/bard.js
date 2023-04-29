@@ -187,7 +187,7 @@ class Bard {
             return {
                 content: parsedResponse.responses[0],
                 options: parsedResponse.responses,
-                conversationId: conversation.c,
+                conversationId: conversationId,
                 requestId: conversation.c,
                 responseId: conversation.rc,
             };
