@@ -1,27 +1,28 @@
 import { Bard } from "../dist/index.js";
-import { config } from "dotenv";
+import * as dotenv from "dotenv";
 import readline from "readline";
+import { SocksProxyAgent } from 'socks-proxy-agent'
 
-config();
+dotenv.config();
+
+const proxyHosts = JSON.parse(process.env.PROXY_HOSTS)
+const proxyHost = proxyHosts[Math.floor(Math.random()*proxyHosts.length)];
+const proxyUrl = `socks5://${process.env.PROXY_USERNAME}:${process.env.PROXY_PASSWORD}@${proxyHost}:${process.env.PROXY_PORT}`;
+// const agent = IS_PRODUCTION ? new SocksProxyAgent(proxyUrl) : undefined
+console.log('use proxy url: ', proxyUrl)
+const agent = new SocksProxyAgent(proxyUrl)
 
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout
 });
 
-let cookies = `NID=; SID=; __Secure-1PSID=; __Secure-3PSID=; HSID=; SSID=; APISID=; SAPISID=; __Secure-1PAPISID=; __Secure-3PAPISID=; SIDCC=; __Secure-1PSIDCC=; __Secure-3PSIDCC=`;
-
-let bot = new Bard(cookies, {
-  proxy: {  // optional
-    host: process.env.PROXY_HOST,
-    port: process.env.PROXY_PORT,
-    auth: {
-      username: process.env.PROXY_USERNAME,
-      password: process.env.PROXY_PASSWORD
-    },
-    protocol: process.env.PROXY_PROTOCOL
-  }
-});
+let cookies = process.env.BARD_COOKIES;
+console.log(cookies)
+let bot = new Bard(
+  cookies, 
+  agent,
+);
 
 async function main() {
   while (true) {
@@ -32,10 +33,8 @@ async function main() {
     });
 
     process.stdout.write("Google Bard: ");
-    await bot.askStream(res => {
-      process.stdout.write(res.toString());
-    }, prompt);
-    console.log();
+    const res = await bot.ask(prompt)
+    console.log(res)
   }
 }
 

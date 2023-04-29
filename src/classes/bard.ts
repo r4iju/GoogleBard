@@ -4,30 +4,27 @@ import https from "https";
 import { load } from "cheerio";
 import Wait from "../utils/wait.js";
 import Random from "../utils/random.js";
-import Options from "../models/options.js";
 import AppDbContext from "./app-dbcontext.js";
 import Conversation from "../models/conversation.js";
 import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
+import { SocksProxyAgent } from 'socks-proxy-agent'
+
 
 class Bard {
 	private axios: AxiosInstance;
 	private db: AppDbContext;
 	private cookies: string = "";
+	private agent: SocksProxyAgent | https.Agent = new https.Agent({ rejectUnauthorized: false });
 
-	constructor(cookie: string, options?: Options) {
+	constructor(cookie: string, agent?: SocksProxyAgent | https.Agent ) {
 		this.db = new AppDbContext();
-
 		this.cookies = cookie;
-
-		const agent = new https.Agent({
-			rejectUnauthorized: false,
-		});
+		if (agent) this.agent = agent;
 
 		let axiosOptions: AxiosRequestConfig = {
-			proxy: options?.proxy,
-			httpsAgent: agent,
+			httpsAgent: this.agent,
 			headers: {
-				"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/109.0",
+				"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:110.0) Gecko/20100101 Firefox/110.0",
 				Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
 				"Accept-Language": "en-US,en;q=0.5",
 				"Accept-Encoding": "gzip, deflate, br",
@@ -41,7 +38,6 @@ class Bard {
 			},
 		};
 
-		if (!axiosOptions.proxy) delete axiosOptions.proxy;
 		this.axios = axios.create(axiosOptions);
 	}
 
