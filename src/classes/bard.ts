@@ -230,6 +230,7 @@ class Bard {
 				conversationId: parsedResponse.conversationId,
 				requestId: parsedResponse.requestId,
 				responseId: parsedResponse.responseId,
+				lastActive: Date.now(),
 			})
 
 			return {

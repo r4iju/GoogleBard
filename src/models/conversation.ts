@@ -3,7 +3,7 @@ interface Conversation {
 	conversationId: string;
 	requestId: string; 
 	responseId: string; 
-	lastActive?: number;
+	lastActive: number;
 }
 
 export default Conversation;
