@@ -3,16 +3,15 @@ import https from "https";
 import { load } from "cheerio";
 import Wait from "../utils/wait.js";
 import Random from "../utils/random.js";
-import AppDbContext from "./app-dbcontext.js";
 import axios from "axios";
 class Bard {
     axios;
-    db;
+    storage;
     cookies = "";
     agent = new https.Agent({ rejectUnauthorized: false });
     constructor(options) {
-        this.db = new AppDbContext();
         this.cookies = options.cookies;
+        this.storage = options.storage;
         if (options.agent)
             this.agent = options.agent;
         let axiosOptions = {
@@ -33,72 +32,74 @@ class Bard {
         };
         this.axios = axios.create(axiosOptions);
     }
-    async waitForLoad() {
-        while (this.db === null) {
-            await Wait(1000);
-        }
-        await this.db.WaitForLoad();
-    }
-    addConversation(id) {
+    async addConversation(id) {
         let conversation = {
             id: id,
-            c: "",
-            r: "",
-            rc: "",
+            conversationId: "",
+            requestId: "",
+            responseId: "",
             lastActive: Date.now(),
         };
-        this.db.conversations.Add(conversation);
+        await this.storage.set('conversations', conversation.id, conversation);
         return conversation;
     }
-    getConversationById(id) {
+    async updateConversation(conversation) {
+        await this.storage.set('conversations', conversation.id, {
+            ...conversation,
+            lastActive: Date.now(),
+        });
+        return conversation;
+    }
+    async getConversationById(id) {
         if (!id)
             return {
                 id: "",
-                c: "",
-                r: "",
-                rc: "",
+                conversationId: "",
+                requestId: "",
+                responseId: "",
                 lastActive: Date.now(),
             };
-        let conversation = this.db.conversations.FirstOrDefault((conversation) => conversation.id === id);
-        if (!conversation) {
-            conversation = this.addConversation(id);
-        }
-        else {
+        let conversation = await this.storage.get('conversations', id);
+        if (conversation) {
             conversation.lastActive = Date.now();
+        }
+        if (!conversation) {
+            conversation = await this.addConversation(id);
         }
         return conversation;
     }
-    resetConversation(id = "default") {
-        let conversation = this.db.conversations.FirstOrDefault((conversation) => conversation.id === id);
+    async resetConversation(id = "default") {
+        let conversation = await this.storage.get('conversations', id);
         if (!conversation)
             return;
         conversation = {
             id: id,
-            c: "",
-            r: "",
-            rc: "",
+            conversationId: "",
+            requestId: "",
+            responseId: "",
             lastActive: Date.now(),
         };
+        await this.storage.set('conversations', id, conversation);
     }
     ParseResponse(text) {
         let resData = {
-            r: "",
-            c: "",
-            rc: "",
+            conversationId: "",
+            requestId: "",
+            responseId: "",
             responses: [],
         };
         let parseData = (data) => {
             if (typeof data === "string") {
                 if (data?.startsWith("c_")) {
-                    resData.c = data;
+                    resData.conversationId = data;
                     return;
                 }
                 if (data?.startsWith("r_")) {
-                    resData.r = data;
+                    resData.requestId = data;
                     return;
                 }
                 if (data?.startsWith("rc_")) {
-                    resData.rc = data;
+                    resData.responseId = data;
                     return;
                 }
                 resData.responses.push(data);
@@ -122,8 +123,9 @@ class Bard {
                 }
             }
         }
-        catch (e) {
-            console.log(e.message);
+        catch (error) {
+            if (error instanceof Error)
+                console.error(error.message);
         }
         return resData;
     }
@@ -163,13 +165,12 @@ class Bard {
         return resData;
     }
     async send(prompt, conversationId) {
-        await this.waitForLoad();
-        let conversation = this.getConversationById(conversationId);
+        let conversation = await this.getConversationById(conversationId);
         try {
             let { at, bl } = await this.GetRequestParams();
             const response = await this.axios.post("https://bard.google.com/_/BardChatUi/data/assistant.lamda.BardFrontendService/StreamGenerate", new URLSearchParams({
                 at: at,
-                "f.req": JSON.stringify([null, `[[${JSON.stringify(prompt)}],null,${JSON.stringify([conversation.c, conversation.r, conversation.rc])}]`]),
+                "f.req": JSON.stringify([null, `[[${JSON.stringify(prompt)}],null,${JSON.stringify([conversation.conversationId, conversation.requestId, conversation.responseId])}]`]),
             }), {
                 headers: {
                     Cookie: this.cookies,
@@ -181,15 +182,18 @@ class Bard {
                 },
             });
             let parsedResponse = this.ParseResponse(response.data);
-            conversation.c = parsedResponse.c;
-            conversation.r = parsedResponse.r;
-            conversation.rc = parsedResponse.rc;
+            await this.updateConversation({
+                id: parsedResponse.conversationId,
+                conversationId: parsedResponse.conversationId,
+                requestId: parsedResponse.requestId,
+                responseId: parsedResponse.responseId,
+            });
             return {
                 content: parsedResponse.responses[0],
                 options: parsedResponse.responses,
                 conversationId: conversationId,
-                requestId: conversation.c,
-                responseId: conversation.rc,
+                requestId: parsedResponse.requestId,
+                responseId: parsedResponse.responseId,
             };
         }
         catch (e) {

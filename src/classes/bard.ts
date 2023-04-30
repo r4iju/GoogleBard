@@ -1,10 +1,11 @@
 import vm from "vm";
-import fs from "fs";
+// import fs from "fs";
 import https from "https";
 import { load } from "cheerio";
 import Wait from "../utils/wait.js";
 import Random from "../utils/random.js";
-import AppDbContext from "./app-dbcontext.js";
+// import AppDbContext from "./app-dbcontext.js";
+import Storage from './storage.js';
 import Conversation from "../models/conversation.js";
 import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
 import { SocksProxyAgent } from 'socks-proxy-agent'
@@ -12,18 +13,21 @@ import BardResponse from "src/models/response.js";
 
 interface BardOptions {
 	cookies: string;
+	storage: Storage;
 	agent?: SocksProxyAgent | https.Agent;
 }
 
 class Bard {
 	private axios: AxiosInstance;
-	private db: AppDbContext;
+	private storage: Storage;
+	// private db: AppDbContext;
 	private cookies: string = "";
 	private agent: SocksProxyAgent | https.Agent = new https.Agent({ rejectUnauthorized: false });
 
 	constructor(options: BardOptions ) {
-		this.db = new AppDbContext();
+		// this.db = new AppDbContext();
 		this.cookies = options.cookies;
+		this.storage = options.storage;
 		if (options.agent) this.agent = options.agent;
 
 		let axiosOptions: AxiosRequestConfig = {
@@ -46,74 +50,88 @@ class Bard {
 		this.axios = axios.create(axiosOptions);
 	}
 
-	private async waitForLoad() {
-		while (this.db === null) {
-			await Wait(1000);
-		}
-		await this.db.WaitForLoad();
-	}
+	// private async waitForLoad() {
+	// 	while (this.db === null) {
+	// 		await Wait(1000);
+	// 	}
+	// 	await this.db.WaitForLoad();
+	// }
 
-	private addConversation(id: string) {
+	private async addConversation(id: string) {
 		let conversation: Conversation = {
 			id: id,
-			c: "", // conversationId
-			r: "", // requestId
-			rc: "", // responseId
+			conversationId: "", 
+			requestId: "", 
+			responseId: "", 
 			lastActive: Date.now(),
 		};
-		this.db.conversations.Add(conversation);
+		// this.db.conversations.Add(conversation);
+		await this.storage.set('conversations', conversation.id, conversation);
 		return conversation;
 	}
 
-	private getConversationById(id?: string) {
+	private async updateConversation(conversation: Conversation) {
+		// this.db.conversations.Add(conversation);
+		await this.storage.set('conversations', conversation.id, {
+			...conversation,
+			lastActive: Date.now(),
+		});
+		return conversation;
+	}
+
+	private async getConversationById(id?: string): Promise<Conversation> {
 		if (!id)
 			return {
 				id: "",
-				c: "", // conversationId
-				r: "", // requestId
-				rc: "", // responseId
+				conversationId: "",
+				requestId: "",
+				responseId: "",
 				lastActive: Date.now(),
 			};
-		let conversation = this.db.conversations.FirstOrDefault((conversation) => conversation.id === id);
-		if (!conversation) {
-			conversation = this.addConversation(id);
-		} else {
+		// let conversation = this.db.conversations.FirstOrDefault((conversation) => conversation.id === id);
+		let conversation = await this.storage.get('conversations', id) as Conversation;
+		if (conversation) {
 			conversation.lastActive = Date.now();
 		}
+		if (!conversation) {
+			conversation = await this.addConversation(id);
+		} 
 		return conversation;
 	}
 
-	public resetConversation(id: string = "default") {
-		let conversation = this.db.conversations.FirstOrDefault((conversation) => conversation.id === id);
+	public async resetConversation(id: string = "default") {
+		let conversation = await this.storage.get('conversations', id) as Conversation;
+		// let conversation = this.db.conversations.FirstOrDefault((conversation) => conversation.id === id);
 		if (!conversation) return;
 		conversation = {
 			id: id,
-			c: "", // conversationId
-			r: "", // requestId
-			rc: "", // responseId
+			conversationId: "", 
+			requestId: "", 
+			responseId: "", 
 			lastActive: Date.now(),
 		};
+		await this.storage.set('conversations', id, conversation);
 	}
 
 	private ParseResponse(text: string) {
 		let resData = {
-			r: "",
-			c: "",
-			rc: "",
+			conversationId: "",
+			requestId: "",
+			responseId: "",
 			responses: [],
 		};
 		let parseData = (data: string) => {
 			if (typeof data === "string") {
 				if (data?.startsWith("c_")) {
-					resData.c = data;
+					resData.conversationId = data;
 					return;
 				}
 				if (data?.startsWith("r_")) {
-					resData.r = data;
+					resData.requestId = data;
 					return;
 				}
 				if (data?.startsWith("rc_")) {
-					resData.rc = data;
+					resData.responseId = data;
 					return;
 				}
 				resData.responses.push(data);
@@ -136,8 +154,8 @@ class Bard {
 					});
 				}
 			}
-		} catch (e: any) {
-			console.log(e.message);
+		} catch (error: unknown) {
+			if (error instanceof Error) console.error(error.message);
 		}
 
 		return resData;
@@ -180,15 +198,15 @@ class Bard {
 	}
 
 	private async send(prompt: string, conversationId?: string): Promise<BardResponse> {
-		await this.waitForLoad();
-		let conversation = this.getConversationById(conversationId);
+		// await this.waitForLoad();
+		let conversation = await this.getConversationById(conversationId);
 		try {
 			let { at, bl } = await this.GetRequestParams();
 			const response = await this.axios.post(
 				"https://bard.google.com/_/BardChatUi/data/assistant.lamda.BardFrontendService/StreamGenerate",
 				new URLSearchParams({
 					at: at,
-					"f.req": JSON.stringify([null, `[[${JSON.stringify(prompt)}],null,${JSON.stringify([conversation.c, conversation.r, conversation.rc])}]`]),
+					"f.req": JSON.stringify([null, `[[${JSON.stringify(prompt)}],null,${JSON.stringify([conversation.conversationId, conversation.requestId, conversation.responseId])}]`]),
 				}),
 				{
 					headers: {
@@ -207,16 +225,19 @@ class Bard {
 			// if (cookies) this.cookies = cookies.join("; ");
 
 			let parsedResponse = this.ParseResponse(response.data);
-			conversation.c = parsedResponse.c; // conversationId
-			conversation.r = parsedResponse.r; // requestId
-			conversation.rc = parsedResponse.rc; // responseId
+			await this.updateConversation({
+				id: parsedResponse.conversationId,
+				conversationId: parsedResponse.conversationId,
+				requestId: parsedResponse.requestId,
+				responseId: parsedResponse.responseId,
+			})
 
 			return {
 				content: parsedResponse.responses[0], 
 				options: parsedResponse.responses,
 				conversationId: conversationId,
-				requestId: conversation.c, 
-				responseId: conversation.rc,
+				requestId: parsedResponse.requestId, 
+				responseId: parsedResponse.responseId,
 			};
 		} catch (e: any) {
 			console.log(e.message);
