@@ -40,11 +40,11 @@ class Bard {
             responseId: "",
             lastActive: Date.now(),
         };
-        await this.storage.set('conversations', conversation.id, conversation);
+        await this.storage.set('bardMessages', conversation.id, conversation);
         return conversation;
     }
     async updateConversation(conversation) {
-        await this.storage.set('conversations', conversation.id, {
+        await this.storage.set('bardMessages', conversation.id, {
             ...conversation,
             lastActive: Date.now(),
         });
@@ -59,7 +59,7 @@ class Bard {
                 responseId: "",
                 lastActive: Date.now(),
             };
-        let conversation = await this.storage.get('conversations', id);
+        let conversation = await this.storage.get('bardMessages', id);
         if (conversation) {
             conversation.lastActive = Date.now();
         }
@@ -69,7 +69,7 @@ class Bard {
         return conversation;
     }
     async resetConversation(id = "default") {
-        let conversation = await this.storage.get('conversations', id);
+        let conversation = await this.storage.get('bardMessages', id);
         if (!conversation)
             return;
         conversation = {
@@ -79,7 +79,7 @@ class Bard {
             responseId: "",
             lastActive: Date.now(),
         };
-        await this.storage.set('conversations', id, conversation);
+        await this.storage.set('bardMessages', id, conversation);
     }
     ParseResponse(text) {
         let resData = {

@@ -65,14 +65,14 @@ class Bard {
 			responseId: "", 
 			lastActive: Date.now(),
 		};
-		// this.db.conversations.Add(conversation);
-		await this.storage.set('conversations', conversation.id, conversation);
+		// this.db.bardMessages.Add(conversation);
+		await this.storage.set('bardMessages', conversation.id, conversation);
 		return conversation;
 	}
 
 	private async updateConversation(conversation: Conversation) {
-		// this.db.conversations.Add(conversation);
-		await this.storage.set('conversations', conversation.id, {
+		// this.db.bardMessages.Add(conversation);
+		await this.storage.set('bardMessages', conversation.id, {
 			...conversation,
 			lastActive: Date.now(),
 		});
@@ -88,8 +88,8 @@ class Bard {
 				responseId: "",
 				lastActive: Date.now(),
 			};
-		// let conversation = this.db.conversations.FirstOrDefault((conversation) => conversation.id === id);
-		let conversation = await this.storage.get('conversations', id) as Conversation;
+		// let conversation = this.db.bardMessages.FirstOrDefault((conversation) => conversation.id === id);
+		let conversation = await this.storage.get('bardMessages', id) as Conversation;
 		if (conversation) {
 			conversation.lastActive = Date.now();
 		}
@@ -100,8 +100,8 @@ class Bard {
 	}
 
 	public async resetConversation(id: string = "default") {
-		let conversation = await this.storage.get('conversations', id) as Conversation;
-		// let conversation = this.db.conversations.FirstOrDefault((conversation) => conversation.id === id);
+		let conversation = await this.storage.get('bardMessages', id) as Conversation;
+		// let conversation = this.db.bardMessages.FirstOrDefault((conversation) => conversation.id === id);
 		if (!conversation) return;
 		conversation = {
 			id: id,
@@ -110,7 +110,7 @@ class Bard {
 			responseId: "", 
 			lastActive: Date.now(),
 		};
-		await this.storage.set('conversations', id, conversation);
+		await this.storage.set('bardMessages', id, conversation);
 	}
 
 	private ParseResponse(text: string) {
