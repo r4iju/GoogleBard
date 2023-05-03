@@ -225,7 +225,6 @@ class Bard {
 			// if (cookies) this.cookies = cookies.join("; ");
 
 			let parsedResponse = this.ParseResponse(response.data);
-			console.log('parsed Response: ', parsedResponse)
 			await this.updateConversation({
 				...conversation,
 				id: parsedResponse.conversationId,
