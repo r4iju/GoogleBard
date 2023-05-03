@@ -1,10 +1,8 @@
 import vm from "vm";
-// import fs from "fs";
 import https from "https";
 import { load } from "cheerio";
 import Wait from "../utils/wait.js";
 import Random from "../utils/random.js";
-// import AppDbContext from "./app-dbcontext.js";
 import Storage from './storage.js';
 import Conversation from "../models/conversation.js";
 import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
@@ -178,7 +176,7 @@ class Bard {
 			const bl = context.googleData.cfb2h;
 			return { at, bl };
 		} catch (e: any) {
-			console.log(e.message);
+			console.error(e.message);
 		}
 	}
 
@@ -241,7 +239,7 @@ class Bard {
 				responseId: parsedResponse.responseId,
 			};
 		} catch (e: any) {
-			console.log(e.message);
+			console.error(e.message);
 		}
 	}
 }

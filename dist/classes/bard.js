@@ -147,7 +147,7 @@ class Bard {
             return { at, bl };
         }
         catch (e) {
-            console.log(e.message);
+            console.error(e.message);
         }
     }
     async ask(prompt, conversationId) {
@@ -198,7 +198,7 @@ class Bard {
             };
         }
         catch (e) {
-            console.log(e.message);
+            console.error(e.message);
         }
     }
 }
